@@ -12,19 +12,19 @@ fn main() {
 }
 
 fn print_error(e: Error){
-    println!("{}", e[Complex]);
+    match e {
+        Error::Simple(t)=>{
+            println!("Simple error at {}", t.elapsed().unwrap().as_nanos());
+        }
+        Error::Complex(t, s)=>{println!("Complex error at {} {}", t.elapsed().unwrap().as_nanos(), s);}
+    }
 }
 
 fn manageFile(){
     match fs::read_to_string("test.txt") {
-        Ok(mut text) => {
+        Ok(text) => {
             println!("{:?}", text);
-            text.push_str("\n");
-            let mut toPrint = String::new();
-            for i in 0..10 {
-                toPrint.push_str(&text.clone());
-            }
-            if let Err(e) = fs::write("test.txt", toPrint.to_string()) {
+            if let Err(e) = fs::write("test.txt", text.repeat(10)) {
                 println!("Failed to write to file: {}", e);
             }
         }
