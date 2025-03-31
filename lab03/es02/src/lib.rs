@@ -1,6 +1,7 @@
 pub mod solution {
     use std::cmp::Ordering;
     use std::fmt::{Debug, Formatter};
+    use std::hash::{Hash, Hasher};
 
     pub struct ComplexNumber {
         pub real: f64,
@@ -139,7 +140,6 @@ pub mod solution {
         }
     }
 
-
     impl PartialOrd<Self> for ComplexNumber {
         fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
             let self_magnitude = (self.real * self.real+self.imag*self.imag).sqrt();
@@ -193,6 +193,14 @@ pub mod solution {
                 real: 0.0,
                 imag: 0.0,
             }
+        }
+    }
+
+    impl Hash for ComplexNumber{
+        fn hash<H: Hasher>(&self, state: &mut H) {
+            // Hash the real and imaginary parts separately
+            self.real.to_bits().hash(state);
+            self.imag.to_bits().hash(state);
         }
     }
 }
