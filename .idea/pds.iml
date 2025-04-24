@@ -11,6 +11,8 @@
       <sourceFolder url="file://$MODULE_DIR$/lab03/complex_numbers/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lab03/es03/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lab04/es01/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lab04/es02/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lab04/es03/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/lab02/es01/target" />
       <excludeFolder url="file://$MODULE_DIR$/lab02/es02/target" />
       <excludeFolder url="file://$MODULE_DIR$/lab02/es03/target" />
@@ -19,6 +21,8 @@
       <excludeFolder url="file://$MODULE_DIR$/lab03/complex_numbers/target" />
       <excludeFolder url="file://$MODULE_DIR$/lab03/es03/target" />
       <excludeFolder url="file://$MODULE_DIR$/lab04/es01/target" />
+      <excludeFolder url="file://$MODULE_DIR$/lab04/es02/target" />
+      <excludeFolder url="file://$MODULE_DIR$/lab04/es03/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
