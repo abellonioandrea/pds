@@ -55,7 +55,7 @@ struct Match<'a> {
 
 // use the crate "regex" to find the pattern and its method find_iter for iterating over the matches
 // modify if necessary, this is just an example for using a regex to find a pattern
-fn find_example<'a>(lines: &Vec<&'a str>, pattern: &str) -> Vec<Match<'a>> {
+fn find_matches<'a>(lines: &Vec<&'a str>, pattern: &str) -> Vec<Match<'a>> {
     let mut matches = Vec::new();
     let re = regex::Regex::new(pattern).unwrap();
     for (line_idx, line) in lines.iter().enumerate() {
@@ -82,36 +82,23 @@ struct FindReplace<'a> {
 
 impl<'a> FindReplace<'a> {
     pub fn new(lines: Vec<&'a str>, pattern: &str) -> Self {
+        let matches = find_matches(&lines, pattern);
         FindReplace {
             lines,
             pattern: pattern.to_string(),
-            matches: Vec::new(),
+            matches,
         }
     }
 
     // return all the matches
     pub fn matches(&mut self) -> &Vec<Match> {
-        let re = regex::Regex::new(&self.pattern).unwrap();
-        for (line_idx, line) in self.lines.iter().enumerate() {
-            for mat in re.find_iter(line) {
-                self.matches.push(Match {
-                    line: line_idx,
-                    start: mat.start(),
-                    end: mat.end(),
-                    text: &line[mat.start()..mat.end()],
-                    repl: None,
-                });
-            }
-        }
         &self.matches
     }
 
     // apply a function to all matches and allow to accept them and set the repl
     // useful for promptig the user for a replacement
     pub fn apply(&mut self, fun: impl Fn(&mut Match) -> bool) {
-        for mat in &mut self.matches {
-            fun(mat);
-        }
+        self.matches.retain_mut(|x| { fun(x) })
     }
 }
 

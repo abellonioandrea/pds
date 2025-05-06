@@ -5,17 +5,11 @@ pub mod simple_even_iter {
 
     // (1) let start with a simple iterator adapter for just one type, "i32"
     // see the adapter pattern example in the pdf "Adapter Pattern..."
-    struct EvenIter<I>
-    where
-        I: Iterator<Item=i32>,
-    {
+    struct EvenIter<I> {
         inner: I, // hint: it's a generic type... here we don't care about bounds yet
     }
 
-    impl<I> EvenIter<I>
-    where
-        I: Iterator<Item=i32>,
-    {
+    impl<I> EvenIter<I> {
         fn new(iter: I) -> Self {
             EvenIter { inner: iter }
         }
@@ -66,11 +60,7 @@ pub mod simple_even_iter {
     impl<T> AddEvenIter for T
     where
         T: Iterator<Item=i32>,
-    {
-        fn even(self) -> EvenIter<Self> {
-            EvenIter::new(self)
-        }
-    }
+    {}
 
     #[test]
     fn test_adapter() {
@@ -129,7 +119,11 @@ pub mod even_iter {
 // finally let's implement the grep command
 // (1) install the "walkdir" crate for walking over directories using an iterator
 // install also the "regex" crate for regular expressions
-
+use regex::Regex;
+use std::{
+    fs::File,
+    io::{self, BufRead, BufReader, Lines},
+};
 use walkdir;
 
 // (2) define the match result
@@ -152,47 +146,92 @@ fn test_walk_dir() {
     }
 }
 
+type FileIterState = (
+    String,                 // the file name
+    Lines<BufReader<File>>, // the iterator over the lines of the file
+    usize,                  // the current line number
+    String,                 // the current line
+    usize,                  // the position of the match in the line
+);
+
 // (3) define the grep adapter for the iterator
 // add anything you need implement it
 struct GrepIter {
     inner: walkdir::IntoIter,
+    regex: Regex,
+    state: Option<FileIterState>,
 }
 
 impl GrepIter {
-    fn new(iter: walkdir::IntoIter) -> Self {
-        GrepIter { inner: iter }
+    fn new(iter: walkdir::IntoIter, pattern: &str) -> Self {
+        GrepIter {
+            inner: iter,
+            regex: Regex::new(pattern).unwrap(),
+            state: None,
+        }
     }
 }
 
 impl Iterator for GrepIter {
-    type Item = Result<Match, walkdir::Error>;
+    type Item = Result<Match, io::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(entry) = self.inner.next() {
-            return match entry {
-                Ok(dir_entry) => {
-                    let file_path = dir_entry.path().display().to_string();
-                    let line = dir_entry.depth();
-                    let text = String::new(); // Placeholder, as text extraction is not implemented
-                    Some(Ok(Match {
-                        file: file_path,
-                        line,
-                        text,
-                    }))
+        loop {
+            match self.state {
+                None => match self.inner.next() {
+                    Some(Ok(entry)) => {
+                        let file = File::open(entry.path()).unwrap();
+                        let reader = BufReader::new(file);
+                        let mut lines = reader.lines();
+
+                        let path = entry.path().to_str().unwrap().to_string();
+
+                        match lines.next() {
+                            Some(Ok(line)) => {
+                                self.state = Some((path, lines, 0, line, 0));
+                            }
+                            Some(Err(e)) => return Some(Err(e)),
+                            None => {}
+                        }
+                    }
+                    Some(Err(e)) => return Some(Err(e.into())),
+                    None => return None,
+                },
+                Some(ref mut state) => {
+                    let (path, lines, line_num, line, pos) = state;
+                    let mut regex = self.regex.find_iter(&line[*pos..]);
+                    match regex.next() {
+                        Some(m) => {
+                            let _m = Match {
+                                file: path.clone(),
+                                line: *line_num,
+                                text: String::from(&line[*pos + m.start()..*pos + m.end()]),
+                            };
+                            *pos += m.end();
+                            return Some(Ok(_m));
+                        }
+                        None => {
+                            match lines.next() {
+                                Some(Ok(_line)) => {
+                                    *line = _line;
+                                    *line_num += 1;
+                                    *pos = 0;
+                                }
+                                Some(Err(e)) => return Some(Err(e)),
+                                None => self.state = None,
+                            }
+                        }
+                    }
                 }
-                Err(err) => {
-                    Some(Err(err))
-                }
-            };
+            }
         }
-        None
     }
 }
 
 #[test]
 fn test_grep_iter() {
     let wdir = walkdir::WalkDir::new("/tmp");
-    let grep_iter = GrepIter::new(wdir.into_iter());
+    let grep_iter = GrepIter::new(wdir.into_iter(), "println");
     for entry in grep_iter {
         match entry {
             Ok(m) => {
@@ -208,19 +247,19 @@ fn test_grep_iter() {
 // (5) add grep() to IntoIter  (see the first example in EvenIter for i32)
 
 trait Grep {
-    fn grep(self) -> GrepIter;
+    fn grep(self, pattern: &str) -> GrepIter;
 }
 
 impl Grep for walkdir::IntoIter {
-    fn grep(self) -> GrepIter {
-        GrepIter::new(self)
+    fn grep(self, pattern: &str) -> GrepIter {
+        GrepIter::new(self, pattern)
     }
 }
 
 #[test]
 fn test_grep() {
     let wdir = walkdir::WalkDir::new("/tmp");
-    let grep_iter = wdir.into_iter().grep();
+    let grep_iter = wdir.into_iter().grep("println");
     for entry in grep_iter {
         match entry {
             Ok(m) => {
