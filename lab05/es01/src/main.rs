@@ -358,7 +358,39 @@ pub mod dlist {
         }
 
         pub fn popn(&mut self, n: usize) -> Option<T> {
-            unimplemented!()
+            let mut cnode = self.head.clone();
+            for _ in 0..n {
+                if let Some(node) = cnode {
+                    cnode = node.borrow_mut().next.clone();
+                } else {
+                    return None;
+                }
+            }
+            match cnode {
+                Some(node) => {
+                    let prev = node.borrow_mut().prev.upgrade();
+                    let next = node.borrow_mut().next.take();
+                    match (prev, next) {
+                        (Some(prev), Some(next)) => {
+                            prev.borrow_mut().next = Some(next.clone());
+                            next.borrow_mut().prev = Rc::downgrade(&prev);
+                        },
+                        (Some(prev), None) => {
+                            prev.borrow_mut().next = None;
+                            self.tail = Rc::downgrade(&prev);
+                        },
+                        (None, Some(next)) => {
+                            next.borrow_mut().prev = Weak::new();
+                            self.head = Some(next.clone());
+                        },
+                        (None, None) => {}
+                    }
+                    Rc::try_unwrap(node)
+                        .map(|node| node.into_inner().elem)
+                        .ok()
+                },
+                None => None
+            }
         }
     }
 
