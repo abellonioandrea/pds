@@ -99,7 +99,7 @@ pub mod List1 {
         // return a referece to the first element of the list
         pub fn peek(&self) -> Option<&T> {
             match &self.head {
-                Node::Cons(elem, next) => Some(&elem),
+                Node::Cons(elem, _) => Some(&elem),
                 Node::Nil => None,
             }
         }
@@ -107,14 +107,19 @@ pub mod List1 {
         //uncomment after having implemented the ListIter struct
         //return an interator over the list values
         fn iter(&self) -> ListIter<T> {
-            ListIter { next: &self.head }
+            ListIter { current: &self.head }
         }
 
         // take the first n elements of the list and return a new list with them
         pub fn take(&mut self, n: usize) -> List<T> {
             let mut newList = List::new();
             for x in 0..n {
-                newList.push(self.pop().unwrap());
+                match self.pop() {
+                    Some(elem) => {
+                        newList.push(elem);
+                    },
+                    None => break
+                }
             }
             newList
         }
@@ -122,16 +127,24 @@ pub mod List1 {
 
     struct ListIter<'a, T> {
         // implement the iterator trait for ListIter
-        next: &'a Node<T>,
+        current: &'a Node<T>,
+    }
+
+    impl<'a, T> ListIter<'a, T> {
+        pub fn new(list: &'a List<T>) -> Self {
+            ListIter {
+                current: &list.head
+            }
+        }
     }
 
     impl<'a, T> Iterator for ListIter<'a, T> {
         type Item = &'a T;
 
         fn next(&mut self) -> Option<Self::Item> {
-            match self.next {
+            match self.current {
                 Node::Cons(elem, next) => {
-                    self.next = next;
+                    self.current = next;
                     Some(elem)
                 }
                 Node::Nil => None,
@@ -162,20 +175,21 @@ pub mod List2 {
     // let mut a = Some(5);
     // let b = a.take(); // a is now None and b is Some(5)
     impl<T> List<T> {
-        pub fn new() -> List<T> {
-            List {
-                head: None
-            }
+        pub fn new() -> Self {
+            List { head: None }
         }
 
         pub fn push(&mut self, elem: T) {
-            let new: NodeLink<T> = Some(Box::from(Node { elem, next: self.head.take() }));
+            let new: NodeLink<T> = Some(Box::new(Node {
+                elem,
+                next: self.head.take(),
+            }));
             self.head = new;
         }
 
         pub fn pop(&mut self) -> Option<T> {
             match self.head.take() {
-                None => { None }
+                None => None,
                 Some(nl) => {
                     self.head = nl.next;
                     Some(nl.elem)
@@ -185,10 +199,8 @@ pub mod List2 {
 
         pub fn peek(&mut self) -> Option<&T> {
             match &self.head {
-                None => { None }
-                Some(nl) => {
-                    Some(&nl.elem)
-                }
+                None => None,
+                Some(nl) => Some(&nl.elem),
             }
         }
 
@@ -202,46 +214,220 @@ pub mod List2 {
     }
 }
 
+// use Rc, since we need more than one reference to the same node.
+// You need to both strong and weak references
+
+// For mutating the list and changing the next and prev fields we also need to be able to mutate the node,
+// therefore we can use RefCell too (as for the tree at lesson)
+
+// how to access content of Rc<RefCell<T>>:
+// es let a = Rc::new(RefCell::new(5));
+// let mut x = (*a).borrow_mut();  // with (*a) we dereference the Rc, with (*a).borrow_mut() we get a mutable reference to the content of the RefCell
+// *x = 6; // we can now change the content of the RefCell
+
+// hint for pop: you can return either a reference to the value or take the value out of the Rc,
+// but usually it is not possible to take out the value from an Rc since it may be referenced elsewhere.
+// if you can guarantee it's the only reference to the value  you can use Rc::try_unwrap(a).unwrap().into_inner() to get the value
+// it first takes out the value from the Rc, then it tries to unwrap the value from the Result, and finally it takes the inner value from the Result
+// see here
+// https://stackoverflow.com/questions/70404603/how-to-return-the-contents-of-an-rc
+// otherwise you can impose the COPY trait on T
+
+// other hint that may be useful: Option<T> has a default clone implementation which calls the clone of T. Therefore:
+// Some(T).clone() ->  Some(T.clone())
+// None.clone() -> None
+
 pub mod dlist {
     // *****
     // double linked list suggestions:
     // the node has both a next and a prev link
 
-    // type NodeLink = ???
-    // typer NodeBackLink = ???
-    // struct DNode<T> {
-    //     elem: T,
-    //     prev: NodeBackLink,  // which type do we use here?
-    //     next: NodeLink, // which type do we use here?
-    // }
+    use std::cell::{Ref, RefCell};
+    use std::rc::{Rc, Weak};
 
-    // struct DList {
-    // head: NodeLink,
-    // tail: NodeLink
-    // }
+    type Node<T> = RefCell<DNode<T>>;
+    type NodeLink<T> = Rc<Node<T>>;
+    type NodeBackLink<T> = Weak<Node<T>>;
 
-    // use Rc, since we need more than one reference to the same node.
-    // You need to both strong and weak references
+    struct DNode<T> {
+        elem: T,
+        prev: NodeBackLink<T>, // which type do we use here?
+        next: Option<NodeLink<T>>,     // which type do we use here?
+    }
 
-    // For mutating the list and changing the next and prev fields we also need to be able to mutate the node,
-    // therefore we can use RefCell too (as for the tree at lesson)
+    struct DList<T> {
+        head: Option<NodeLink<T>>,
+        tail: NodeBackLink<T>,
+    }
 
-    // how to access content of Rc<RefCell<T>>:
-    // es let a = Rc::new(RefCell::new(5));
-    // let mut x = (*a).borrow_mut();  // with (*a) we dereference the Rc, with (*a).borrow_mut() we get a mutable reference to the content of the RefCell
-    // *x = 6; // we can now change the content of the RefCell
+    impl<T> DList<T> {
+        fn new() -> Self {
+            DList {
+                head: None,
+                tail: Weak::new(),
+            }
+        }
 
-    // hint for pop: you can return either a reference to the value or take the value out of the Rc,
-    // but usually it is not possible to take out the value from an Rc since it may be referenced elsewhere.
-    // if you can guarantee it's the only reference to the value  you can use Rc::try_unwrap(a).unwrap().into_inner() to get the value
-    // it first takes out the value from the Rc, then it tries to unwrap the value from the Result, and finally it takes the inner value from the Result
-    // see here
-    // https://stackoverflow.com/questions/70404603/how-to-return-the-contents-of-an-rc
-    // otherwise you can impose the COPY trait on T
+        fn push_front(&mut self, val: T) {
+            match self.head.take() {
+                Some(head) => {
+                    let new_node = Rc::new(RefCell::new(DNode {
+                        elem: val,
+                        next: Some(head.clone()),
+                        prev: Weak::new(),
+                    }));
+                    head.borrow_mut().prev = Rc::downgrade(&new_node);
+                    self.head = Some(new_node);
+                },
+                None => {
+                    let new_node = Rc::new(RefCell::new(DNode {
+                        elem: val,
+                        next: None,
+                        prev: Weak::new(),
+                    }));
+                    self.tail = Rc::downgrade(&new_node);
+                    self.head = Some(new_node);
+                }
+            }
+        }
 
-    // other hint that may be useful: Option<T> has a default clone implementation which calls the clone of T. Therefore:
-    // Some(T).clone() ->  Some(T.clone())
-    // None.clone() -> None
+        fn push_back(&mut self, val: T) {
+            match self.tail.upgrade() {
+                Some(tail) => {
+                    let new_node = Rc::new(RefCell::new(DNode {
+                        elem: val,
+                        next: None,
+                        prev: Rc::downgrade(&tail),
+                    }));
+                    tail.borrow_mut().next = Some(new_node.clone());
+                    self.tail = Rc::downgrade(&new_node);
+                },
+                None => {
+                    let new_node = Rc::new(RefCell::new(DNode {
+                        elem: val,
+                        next: None,
+                        prev: Weak::new(),
+                    }));
+                    self.head = Some(new_node.clone());
+                    self.tail = Rc::downgrade(&new_node);
+                }
+            }
+        }
+
+        pub fn pop_front(&mut self) -> Option<T> {
+            match self.head.take() {
+                Some(head) => {
+                    let next = head.borrow_mut().next.take();
+                    if let Some(next) = next { //c'è un elemento dopo
+                        next.borrow_mut().prev = Weak::new();
+                        self.head = Some(next);
+                    } else { //non c'è nulla dopo
+                        self.head = None;
+                        self.tail = Weak::new();
+                    }
+                    Rc::try_unwrap(head)
+                        .map(|node| node.into_inner().elem)
+                        .ok()
+                },
+                None => None
+            }
+        }
+
+        pub fn pop_back(&mut self) -> Option<T> {
+            match self.tail.upgrade() {
+                Some(tail) => {
+                    let prev = tail.borrow_mut().prev.upgrade();
+                    if let Some(prev) = prev { //c'è ancora un elemento prima
+                        prev.borrow_mut().next = None;
+                        self.tail = Rc::downgrade(&prev);
+                    } else { //non c'è nulla prima
+                        self.head = None;
+                        self.tail = Weak::new();
+                    }
+                    Rc::try_unwrap(tail)
+                        .map(|node| node.into_inner().elem)
+                        .ok()
+                },
+                None => None
+            }
+        }
+
+        pub fn peek_front(&self) -> Option<Ref<T>> {
+            self.head.as_ref()
+                .map(|node| Ref::map(node.borrow(), |inner| &inner.elem))
+        }
+
+        pub fn popn(&mut self, n: usize) -> Option<T> {
+            unimplemented!()
+        }
+    }
+
+    #[test]
+    pub fn test_push_front() {
+        let mut dlist = DList::new();
+        dlist.push_front(1);
+        assert!(dlist.head.as_ref().map(|n| n.borrow().elem) == Some(1));
+        dlist.push_front(2);
+        assert!(dlist.tail.upgrade().map(|n| n.borrow().elem) == Some(1));
+        assert!(dlist.head.as_ref().map(|n| n.borrow().elem) == Some(2));
+    }
+
+    #[test]
+    pub fn test_push_back() {
+        let mut dlist = DList::new();
+        dlist.push_back(1);
+        assert!(dlist.head.as_ref().map(|n| n.borrow().elem) == Some(1));
+        dlist.push_back(2);
+        assert!(dlist.tail.upgrade().map(|n| n.borrow().elem) == Some(2));
+        assert!(dlist.head.as_ref().map(|n| n.borrow().elem) == Some(1));
+    }
+
+    #[test]
+    pub fn test_pop_front() {
+        let mut dlist = DList::new();
+        dlist.push_front(1);
+        dlist.push_front(2);
+        assert!(dlist.pop_front() == Some(2));
+        assert!(dlist.head.as_ref().map(|n| n.borrow().elem) == Some(1));
+        assert!(dlist.pop_front() == Some(1));
+        assert!(dlist.pop_front() == None);
+    }
+
+    #[test]
+    pub fn test_pop_back() {
+        let mut dlist = DList::new();
+        dlist.push_back(1);
+        dlist.push_back(2);
+        assert!(dlist.pop_back() == Some(2));
+        assert!(dlist.tail.upgrade().map(|n| n.borrow().elem) == Some(1));
+        assert!(dlist.pop_back() == Some(1));
+        assert!(dlist.pop_back() == None);
+    }
+
+    #[test]
+    pub fn test_peek_front() {
+        let mut dlist = DList::new();
+        dlist.push_front(1);
+        dlist.push_front(2);
+        let front = dlist.peek_front();
+        assert!(front.map(|n| *n) == Some(2));
+    }
+
+    #[test]
+    pub fn test_popn() {
+        let mut dlist = DList::new();
+        for i in 0..10 {
+            println!("pushing {}", i);
+            dlist.push_front(i);
+        }
+
+        assert!(dlist.popn(0) == Some(9));
+        assert!(dlist.popn(1) == Some(7));
+        assert!(dlist.popn(0) == Some(8));
+        // now we have 6, 5, 4, 3, 2, 1, 0
+        assert!(dlist.popn(6) == Some(0));
+        assert!(dlist.popn(5) == Some(1));
+    }
 }
 
 fn main() {}
