@@ -7,6 +7,27 @@ use std::fs;
 
 use walkdir::WalkDir;
 
+pub struct File {
+    name: String,
+    size: usize,
+    parent: FSNodeWeak,
+}
+
+pub struct Directory {
+    name: String,
+    parent: FSNodeWeak,
+    children: Vec<FSNode>,
+}
+
+pub struct Link {
+    name: String,
+    target: String,
+    parent: FSNodeWeak,
+}
+type FSItemCell = RefCell<FSItem>;
+type FSNode = Rc<FSItemCell>;
+type FSNodeWeak = Weak<FSItemCell>;
+
 pub enum FSItem {
     Directory(Directory), // Directory contiene nome, i figli, eventuali metadati, il padre
     File(File), // File contiene il nome, eventuali metadati (es dimensione, owner, ecc), il padre
@@ -85,49 +106,74 @@ impl FSItem {
     }
 }
 
-struct FileSystem {}
+struct FileSystem {
+    real_path: String,
+    root: FSNode,
+    current: FSNode,
+    side_effects: bool,
+}
 
 impl FileSystem {
     // crea un nuovo FS vuoto
     pub fn new() -> Self {
-        unimplemented!()
+        let root = Rc::new(RefCell::new(FSItem::Directory(Directory {
+            name: "".to_string(),
+            parent: Weak::new(),
+            children: vec![],
+        })));
+
+        FileSystem {
+            real_path: "/".to_string(),
+            root: root.clone(),
+            current: root,
+            side_effects: false,
+        }
     }
 
     // crea un nuovo FS replicando la struttura su disco
-    pub fn from_disk() -> Self {
-        unimplemented!()
+    pub fn from_disk(base_path: &str) -> Self {
+        let mut fs = FileSystem::new();
+        fs.set_real_path(base_path);
+
+        let wdir = WalkDir::new(base_path);
+        for entry in wdir.into_iter().filter(|e| e.is_ok()).map(|e| e.unwrap()) {}
+        fs
+    }
+
+    pub fn set_real_path(&mut self, real_path: &str) {
+        self.real_path = real_path.to_string();
     }
 
     // cambia la directory corrente, path come in tutti gli altri metodi
     // può essere assoluto o relativo;
     // es: “../sibling” vuol dire torna su di uno e scendi in sibling
-    pub fn change_dir(&mut self, path: String) -> Result {
+    pub fn change_dir(&mut self, path: &str) -> Result {
         unimplemented!()
     }
 
     // crea la dir in memoria e su disco
-    pub fn make_dir(&self, path: String, name: String) -> Result {
+    pub fn make_dir(&self, path: &str, name: &str) -> Result {
         unimplemented!()
     }
 
     // crea un file vuoto in memoria e su disco
-    pub fn make_file(&self, path: String, name: String) -> Result {
+    pub fn make_file(&self, path: &str, name: &str) -> Result {
         unimplemented!()
     }
 
     // rinonima file / dir in memoria e su disco
-    pub fn rename(&self, path: String, new_name: String) -> Result {
+    pub fn rename(&self, path: &str, new_name: &str) -> Result {
         unimplemented!()
     }
 
     // cancella file / dir in memoria e su disco, se è una dir cancella tutto il contenuto
-    pub fn delete(&self, path: String) -> Result {
+    pub fn delete(&self, path: &str) -> Result {
         unimplemented!()
     }
 
     // cerca l’elemento indicato dal path e restituisci un riferimento
-    pub fn find(&self, path: String) -> Result {
-        unimplemented!()
+    pub fn find(&self, path: &str) -> Result {
+        
     }
 }
 
@@ -169,7 +215,6 @@ mod tests {
         }
     }
 
-
     #[test]
     fn test_file_system() {
         let fs = create_file_system_with_structure();
@@ -177,7 +222,6 @@ mod tests {
         assert!(fs.find("/home/demo/file.txt").is_none());
         assert!(fs.find("/home/user1/file.txt").is_some());
     }
-
 
     #[test]
     fn test_follow_link() {
@@ -200,8 +244,10 @@ mod tests {
         fs.make_file("/test_dir/dir1", "file1.txt").unwrap();
         fs.make_file("/test_dir/dir1", "file2.txt").unwrap();
         fs.rename("/test_dir/dir1/file2.txt", "file3.txt").unwrap();
-        fs.make_link("/test_dir/dir1", "link3.txt", "./file3.txt").unwrap();
-        fs.make_link("/test_dir/dir1", "link1.txt", "./file1.txt").unwrap();
+        fs.make_link("/test_dir/dir1", "link3.txt", "./file3.txt")
+            .unwrap();
+        fs.make_link("/test_dir/dir1", "link1.txt", "./file1.txt")
+            .unwrap();
         fs.delete("/test_dir/dir1").unwrap();
 
         // uncommento to delete all
@@ -212,13 +258,11 @@ mod tests {
 
     #[test]
     fn test_from_file_system() {
-
         // adjust to your system
-        let fs = FileSystem::from_file_system("/etc/apt");
+        let fs = FileSystem::from_disk("/etc/apt");
         assert!(fs.find("/sources.list").is_some());
     }
 }
-
 
 fn main() {
     println!("Hello, world!");
