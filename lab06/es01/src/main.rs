@@ -71,7 +71,7 @@ pub fn find_primes2(limit: u64, n_threads: u64) -> Vec<u64> {
     for i in 1..n_threads + 1 {
         threads.push(thread::spawn(move || {
             let mut vet: Vec<u64> = vec![];
-            for x in 2..(limit / i) {
+            for x in ((1 + i)..limit).step_by(n_threads as usize) {
                 if is_prime(x) {
                     vet.push(x);
                 }
