@@ -11,54 +11,44 @@ pub enum Item<T> {
 
 pub struct MyChannel<T> {
     queue: Mutex<VecDeque<Item<T>>>,
-    cv_p: Arc<(Mutex<bool>, Condvar)>, //condition variable per produttore
-    cv_c: Arc<(Mutex<bool>, Condvar)>, //condition variable per consumatore
+    cv: Condvar,
     close: Mutex<bool>,
 }
 impl<T> MyChannel<T> {
     pub fn new(n: usize) -> Self {
         MyChannel {
             queue: Mutex::new(VecDeque::with_capacity(n)),
-            cv_p: Arc::new((Mutex::new(false), Condvar::new())),
-            cv_c: Arc::new((Mutex::new(false), Condvar::new())),
+            cv: Condvar::new(),
             close: Mutex::new(false),
         }
     }
 
     pub fn write(&self, item: Item<T>) -> Result<(), ()> {
-        if self.close.lock().unwrap().eq(&false) {
-            let mut producer_lock = self.cv_p.0.lock().unwrap();
-            let mut queue_lock = self.queue.lock().unwrap();
-            while queue_lock.len() == queue_lock.capacity() {
-                producer_lock = self.cv_p.1.wait(producer_lock).unwrap(); //metto in attesa i produttori finchè il consumatore non avrà consumato almeno un elemento
-            }
-            queue_lock.push_back(item);
-
-            self.cv_c.1.notify_one(); //sblocco eventuali consumatori in attesa
-            return Ok(());
+        let mut data = self.queue.lock().expect("Mutex poisoned");
+        while (data.len() == data.capacity()) {
+            data = self.cv.wait(data).expect("Mutex poisoned");
         }
-        Err(())
+        data.push_back(item);
+        drop(data);
+        self.cv.notify_one();
+        Ok(())
     }
 
     pub fn read(&self) -> Result<Item<T>, ()> {
-        let mut consumer_lock = self.cv_c.0.lock().unwrap();
-        let mut queue_lock = self.queue.lock().unwrap();
-        while queue_lock.len() == 0 {
-            if self.close.lock().unwrap().eq(&true) {
-                return Err(());
-            }
-            //self.cv_c.1.wait(self.cv_c.0.lock().unwrap());
-            consumer_lock = self.cv_c.1.wait(consumer_lock).unwrap();  //blocco i consumatori finchè non c'è un altro elemento prodotto
+        let mut data = self.queue.lock().expect("Mutex poisoned");
+        while (data.len() == 0) {
+            data = self.cv.wait(data).expect("Mutex poisoned");
         }
-
-        self.cv_p.1.notify_one(); //sblocco tutti i produttori
-        Ok(queue_lock.pop_front().unwrap())
+        let a = data.pop_front();
+        drop(data);
+        self.cv.notify_one();
+        Ok(a.unwrap())
     }
 
     pub fn close(&self) {
         let mut aa = self.close.lock().unwrap();
         *aa = true;
-        self.cv_c.1.notify_all();
+        self.cv.notify_all();
     }
 }
 
