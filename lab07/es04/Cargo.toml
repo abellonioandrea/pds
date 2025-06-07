@@ -1,0 +1,8 @@
+[package]
+name = "es04"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+crossbeam = "0.8.4"
+rand = "0.9.1"
