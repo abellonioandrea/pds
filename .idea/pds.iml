@@ -23,6 +23,15 @@
       <sourceFolder url="file://$MODULE_DIR$/lab07/es01/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lab07/es03/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lab07/es04/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/temi d'esame/e20240625/es01/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/temi d'esame/e20240124/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/temi d'esame/e20250113/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/temi d'esame/e20230904/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/temi d'esame/mannaggia/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/temi d'esame/countDownLock/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/temi d'esame/delayedQueue/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/temi d'esame/exchanger/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/temi d'esame/multichannel/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/lab02/es01/target" />
       <excludeFolder url="file://$MODULE_DIR$/lab02/es02/target" />
       <excludeFolder url="file://$MODULE_DIR$/lab02/es03/target" />
@@ -43,6 +52,15 @@
       <excludeFolder url="file://$MODULE_DIR$/lab07/es01/target" />
       <excludeFolder url="file://$MODULE_DIR$/lab07/es03/target" />
       <excludeFolder url="file://$MODULE_DIR$/lab07/es04/target" />
+      <excludeFolder url="file://$MODULE_DIR$/temi d'esame/e20240625/es01/target" />
+      <excludeFolder url="file://$MODULE_DIR$/temi d'esame/e20240124/target" />
+      <excludeFolder url="file://$MODULE_DIR$/temi d'esame/e20250113/target" />
+      <excludeFolder url="file://$MODULE_DIR$/temi d'esame/e20230904/target" />
+      <excludeFolder url="file://$MODULE_DIR$/temi d'esame/mannaggia/target" />
+      <excludeFolder url="file://$MODULE_DIR$/temi d'esame/countDownLock/target" />
+      <excludeFolder url="file://$MODULE_DIR$/temi d'esame/delayedQueue/target" />
+      <excludeFolder url="file://$MODULE_DIR$/temi d'esame/exchanger/target" />
+      <excludeFolder url="file://$MODULE_DIR$/temi d'esame/multichannel/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

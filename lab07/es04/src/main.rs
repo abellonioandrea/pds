@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
 use crossbeam::channel::{unbounded, Sender, Receiver, select};
-use rand::Rng;
 
 fn main() {
     let (c_sender, c_receiver): (Sender<String>, Receiver<String>) = unbounded();
